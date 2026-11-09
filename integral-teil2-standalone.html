@@ -694,6 +694,9 @@ body.nar .t2a{position:static}
 .pager{display:flex;gap:10px;margin-top:26px}
 .pager .sp{flex:1}
 
+.retry{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--fall) 8%,transparent);border:1px solid color-mix(in srgb,var(--fall) 30%,transparent)}
+.resetall{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:6px}
+
 </style>
 <script>
 (function(){
@@ -2982,12 +2985,22 @@ function aufgabe(A){
   var wrap=h("div",{class:"t2"+(exam?" exam":"")}), side=h("div",{class:"t2a"},angabe(A)), list=h("div",{class:"t2t"});
   wrap.append(side,list); view.append(wrap);
   var lastAb=null;
+  /* Karte einer Teilaufgabe; nach einer falschen Antwort lässt sie sich zurücksetzen und neu probieren */
+  function mkCard(t){
+    var sp=specOf(t), card, c={t:t,sp:sp};
+    card=taskCard(sp,{lv:"X",kind:"",title:partNo(A,t)+" "+t.op,count:t.gk+" · 1 Punkt"+(ST.done[t.id]?" · gelöst":""),
+      onDone:function(ok){ res[t.id]=ok; if(ok){ ST.done[t.id]=1; } save(); drawRail(A.id);
+        if(exam||wrap.classList.contains("done")) summary(); return 0; },
+      onRetry:function(){ again(c); }});
+    card.id="t-"+t.id; c.card=card;
+    if(exam&&!wrap.classList.contains("done")&&sp.fmt!=="offen") card.api.R.ready=function(){ return true; };
+    return c;
+  }
+  function again(c){ var n=mkCard(c.t); delete res[c.t.id]; c.card.replaceWith(n.card); cards[cards.indexOf(c)]=n; tidy(n.card);
+    if(wrap.classList.contains("done")) summary(); try{ n.card.scrollIntoView({block:"nearest",behavior:"smooth"}); }catch(e){} }
   A.teile.forEach(function(t){
     if(t.ab&&t.ab!==lastAb){ lastAb=t.ab; list.append(h("h2",{class:"abh"},t.ab)); }
-    var sp=specOf(t);
-    var card=taskCard(sp,{lv:"X",kind:"",title:partNo(A,t)+" "+t.op,count:t.gk+" · 1 Punkt"+(ST.done[t.id]?" · gelöst":""),
-      onDone:function(ok){ res[t.id]=ok; if(ok){ ST.done[t.id]=1; } save(); drawRail(A.id); if(exam) summary(); return 0; }});
-    card.id="t-"+t.id; cards.push({t:t,card:card,sp:sp}); list.append(card);
+    var c=mkCard(t); cards.push(c); list.append(c.card);
   });
   var sum=h("div",{class:"sum",hidden:true});
   if(exam){
@@ -2999,13 +3012,15 @@ function aufgabe(A){
     list.append(h("div",{class:"submit"},sub,h("span",{class:"small"},"Leere Felder zählen null Punkte.")));
   }
   list.append(sum);
+  var resetAll=btn("Alle Antworten dieser Aufgabe löschen",function(b){ b=resetAll;
+    if(b.dataset.sure){ render(); var top=view.querySelector("h1"); if(top) try{ top.scrollIntoView({block:"start"}); }catch(e){} }
+    else { b.dataset.sure="1"; b.textContent="Wirklich alle Eingaben löschen?"; setTimeout(function(){ if(b.isConnected){ delete b.dataset.sure; b.textContent="Alle Antworten dieser Aufgabe löschen"; } },3500); } },"sm ghost");
+  list.append(h("div",{class:"resetall"},resetAll,h("span",{class:"small"},exam?"Danach trägst du alles neu ein und gibst noch einmal ab.":"Bereits erreichte Punkte bleiben dir erhalten.")));
   function summary(){
     var p=0, open=0; cards.forEach(function(c){ if(res[c.t.id]===true) p++; if(res[c.t.id]===undefined) open++; });
     sum.hidden=false; clr(sum).append(h("b",{},p+" von "+A.teile.length+" Punkten"),
-      h("span",{},open?open+(open===1?" offene Antwort wartet":" offene Antworten warten")+" noch auf deine Selbstkontrolle.":"Alle Teilaufgaben sind ausgewertet."));
+      h("span",{},open?(open===1?"1 Teilaufgabe ist noch offen oder wartet auf deine Selbstkontrolle.":open+" Teilaufgaben sind noch offen oder warten auf deine Selbstkontrolle."):"Alle Teilaufgaben sind ausgewertet."));
   }
-  /* Im Maturamodus: leere Eingaben gelten als falsch statt als „fehlt noch“ */
-  if(exam) cards.forEach(function(c){ if(c.sp.fmt!=="offen") c.card.api.R.ready=function(){ return true; }; });
   view.append(h("div",{class:"pager"},prev?h("a",{class:"btn",href:"#"+prev.id},"← Aufgabe "+prev.nr):h("span",{}),h("span",{class:"sp"}),next?h("a",{class:"btn prim",href:"#"+next.id},"Aufgabe "+next.nr+" →"):h("a",{class:"btn",href:"#start"},"Zur Übersicht")));
 }
 
