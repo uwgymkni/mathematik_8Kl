@@ -697,6 +697,12 @@ body.nar .t2a{position:static}
 .retry{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--fall) 8%,transparent);border:1px solid color-mix(in srgb,var(--fall) 30%,transparent)}
 .resetall{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:6px}
 
+.altw{display:inline-block;font-size:.78em;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--dy);border:1.5px solid var(--dy);border-radius:999px;padding:1px 8px;margin-right:4px;vertical-align:1px}
+.t2 .solbody.hasviz{display:block}
+.t2 .solbody.hasviz .solL{position:static;border-right:0;border-bottom:1px solid var(--line-2)}
+.t2 .sol .viz svg{display:block;max-width:560px;width:100%;margin:0 auto}
+.t2 .sol .steps .ma{overflow-x:auto;max-width:100%}
+
 </style>
 <script>
 (function(){
@@ -2885,6 +2891,198 @@ function figOf(F,o){ o=o||{};
   P.fn(F.f,"--dx",3,{from:F.from,to:F.to});
   return P; }
 
+/* ══════════ Lösungswege mit Animation und anderen Wegen ══════════
+   Ergänzt die Teilaufgaben aus daten.js: t.viz (Bild zum Lösungsweg) und t.weg (Schritte mit Animation a(V)).
+   Schritte mit der Marke ALT zeigen einen zweiten Lösungsweg. Nur das Übungstool verwendet diese Datei. */
+var ALT="<span class='altw'>Anderer Weg</span> ";
+function cst(c){ return function(){ return c; }; }
+function figF(A){ return A.fig||A.loesFig; }
+/* ein Koordinatensystem mit dem Graphen der Angabe */
+function pl1(A,o){ o=o||{}; var F=figF(A);
+  return vPlane(o.xr||F.xr,o.yr||F.yr,{W:560,H:o.H||320,xl:F.xl,yl:F.yl,sx:F.sx,sy:o.sy||F.sy,pre:function(P){
+    if(F.line!=null&&!o.noline){ P.seg(F.xr[0],F.line,F.xr[1],F.line,"--right",2,{dash:"6 4"}); P.label(F.xr[1]-.1,F.line+F.sy*.35,"Abfluss","--right",{anchor:"end"}); }
+    if(!o.nograph) P.fn(o.f||F.f,"--dx",3,{from:F.from,to:F.to}); if(o.pre) o.pre(P); }}); }
+/* zwei Koordinatensysteme untereinander: oben die Rate, unten die Bestandsfunktion G */
+function pl2(A,G,o){ o=o||{}; var top=pl1(A,{H:250,yr:o.yr}), bot=vPlane(G.xr||figF(A).xr,G.yr,{W:560,H:250,xl:figF(A).xl,yl:G.yl,sx:figF(A).sx,sy:G.sy,pre:function(P){ if(!G.hide) P.fn(G.f,"--ink-2",2.6,{from:G.from,to:G.to}); }});
+  return function(host){ var a=top(host), b=bot(host); return {dyn:a.dyn,r:a,s:b,reset:function(){ a.reset(); b.reset(); }}; }; }
+function ar(V,f,a,b,col,d,o){ o=o||{}; return shade(V,f,a,b,col||"--dx",{edge:true,delay:d||0,g:o.g,op:o.op}); }
+function rect(V,a,b,m,d,lab){ shade(V,cst(m),a,b,"--right",{delay:d||0,op:".2"}); V.Sg(a,m,b,m,"--right",d||0); if(lab) V.Tx(b,m,lab,"--right",(d||0)+.4,{dx:8,dy:-6}); }
+function hl(V,y,col,d,lab,x){ V.Sg(V.xr[0],y,V.xr[1],y,col||"--gold",d||0,{dash:"6 4",w:2}); if(lab) V.Tx(x!=null?x:V.xr[1],y,lab,col||"--gold",(d||0)+.2,{anchor:"end",dy:-7}); }
+function tang(V,f,x0,h,col,d){ var e=1e-4, k=(f(x0+e)-f(x0-e))/(2*e), y=f(x0); V.Sg(x0-h,y-k*h,x0+h,y+k*h,col||"--gold",d||0); V.Pt(x0,y,"",col||"--gold",(d||0)+.3); return k; }
+function trap(V,x1,x2,f,d){ V.Poly([[x1,0],[x1,f(x1)],[x2,f(x2)],[x2,0],[x1,0]],"--right",d||0); }
+/* Schritte zuweisen: Text der alten Schritte bleibt, Animationen und weitere Schritte kommen dazu */
+function WG(id,viz,anims,extra){
+  var t=null; AUFG.forEach(function(A){ A.teile.forEach(function(x){ if(x.id===id) t=x; }); });
+  if(!t) return;
+  var st=(t.weg||[]).length?t.weg.slice():[t.loesung];
+  st=st.map(function(s,i){ s=typeof s==="string"?{t:s}:Object.assign({},s); if(anims&&typeof anims[i]==="function") s.a=anims[i]; return s; });
+  if(extra) st=st.concat(extra);
+  t.weg=st; t.viz=viz;
+}
+var A_=function(n){ return AUFG[n-1]; };
+
+/* ───── Aufgabe 1 ───── */
+(function(){ var A=A_(1), r=r1, Vf=function(t){ return 120*t-5*t*t; }, G={f:Vf,from:0,to:8,yr:[0,700],sy:100,yl:"V(t) in L"};
+  WG("a1-1",pl1(A),[function(V){ V.sweep(0,6); ar(V,r,0,6,"--dx",.3); },function(V){ V.Tx(3,40,"540 L","--ink",.1,{anchor:"middle"}); }],
+    [{t:ALT+"Der Graph von "+K("r")+" ist eine Gerade, die Fläche ein Trapez mit den Seiten "+K("r(0) = 120")+" und "+K("r(6) = 60")+":",m:K("{120 + 60/2} * 6 = 540"),a:function(V){ V.reset(); trap(V,0,6,r); ar(V,r,0,6,"--right",.6,{op:".14"}); }}]);
+  WG("a1-2",pl1(A),[function(V){ V.sweep(0,8); ar(V,r,0,8,"--dx",.3); },function(V){ V.Tx(4,40,"640 L","--ink",0,{anchor:"middle"}); }]);
+  WG("a1-3",pl2(A,G),[function(V){ V.s.F(Vf,"--dx",0,{from:0,to:8}); },function(V){ V.s.Pt(0,0,"V(0) = 0","--right",0,{dx:10,dy:-12}); }]);
+  WG("a1-4",pl2(A,G),[function(V){ V.s.F(Vf,"--dx",0,{from:0,to:8}); hl(V.s,500,"--gold",.4,"500 L",8.8); },function(V){ V.s.Pt(5.367,500,"t ≈ 5,37","--right",0,{dx:8,dy:22}); V.s.Sg(5.367,0,5.367,500,"--right",.2,{dash:"5 5",w:1.5}); ar(V.r,r,0,5.367,"--dx",.3); }],
+    [{t:ALT+"Grafisch: Man schneidet den Graphen von "+K("V")+" mit der waagrechten Geraden "+K("V = 500")+". Die zweite Lösung 18,63 liegt außerhalb des Bildes und des Modellzeitraums."}]);
+  WG("a1-5",pl2(A,G),[function(V){ V.r.sweep(0,8); V.r.Pt(8,40,"r(8) = 40","--right",.4,{dx:-60,dy:-12}); hl(V.r,0,"--ink-3",0); },function(V){ V.s.F(Vf,"--dx",0,{from:0,to:8}); V.s.Tx(4.6,480,"steigt, wird flacher","--dx",.6); }]);
+  WG("a1-6",pl2(A,G),[function(V){ ar(V.r,r,2,6,"--dx",0); rect(V.r,2,6,80,.6,"80"); V.r.Tx(4,20,"gleich große Flächen","--ink",1,{anchor:"middle"}); }],
+    [{t:ALT+"Mit der Formel für die mittlere Änderungsrate: Die mittlere Zuflussrate ist die mittlere Änderungsrate der Wassermenge "+K("V")+" auf "+K("[2; 6]")+".",m:K("{V(6) - V(2)/6 - 2} = {540 - 220/4} = 80"),
+      a:function(V){ V.reset(); V.s.F(Vf,"--ink-2",0,{from:0,to:8}); V.s.Pt(2,220,"V(2) = 220","--dy",.2,{dx:-6,dy:-14}); V.s.Pt(6,540,"V(6) = 540","--dy",.4,{dx:-110,dy:-10}); V.s.Sg(2,220,6,540,"--right",.7); V.s.T(2,220,4,320,1.1); }},
+     {t:ALT+"Weil "+K("r")+" linear ist, ist die mittlere Rate der Mittelwert der Randwerte:",m:K("{r(2) + r(6)/2} = {100 + 60/2} = 80"),a:function(V){ V.reset(); V.r.Pt(2,100,"100","--right",0); V.r.Pt(6,60,"60","--right",.2); V.r.Pt(4,80,"80","--gold",.5,{dx:8,dy:-10}); }}]);
+})();
+
+/* ───── Aufgabe 2 ───── */
+(function(){ var A=A_(2), v=v2, s=function(t){ return -t*t*t/6+1.5*t*t+2*t+5; }, G={f:s,from:0,to:6,yr:[0,40],sy:5,yl:"s(t) in m"};
+  WG("a2-1",pl2(A,G),[function(V){ V.s.F(s,"--dx",0,{from:0,to:6}); },function(V){ V.s.Pt(0,5,"s(0) = 5","--right",0); }]);
+  WG("a2-2",pl2(A,G),[function(V){ V.r.sweep(0,6); ar(V.r,v,0,6,"--dx",.3); V.s.Pt(0,5,"5","--right",.2); V.s.Pt(6,35,"35","--right",.4,{dx:-28}); V.s.Sg(6,5,6,35,"--dx",.8); V.s.Tx(5.9,20,"30 m","--dx",1.2,{anchor:"end"}); }],
+    [{t:ALT+"Direkt mit der Stammfunktion ohne Startwert:",m:K("[-{1/6}t^3 + 1,5t^2 + 2t]bar(0,6) = -36 + 54 + 12 = 30")}]);
+  WG("a2-3",pl1(A),[function(V){ V.Pt(3,6.5,"v(3) = 6,5","--right",0); V.Sg(1.6,6.5,4.4,6.5,"--gold",.3); },null],
+    [{t:ALT+"Scheitelform durch quadratisches Ergänzen:",m:K("v(t) = -0,5(t - 3)^2 + 6,5")+": Scheitel bei "+K("t = 3"),a:function(V){ V.reset(); V.Sg(3,0,3,7.6,"--gold",0,{dash:"6 4",w:2}); V.Pt(3,6.5,"S(3 | 6,5)","--right",.3); }}]);
+  WG("a2-4",pl1(A),[function(V){ tang(V,v,5,1.1,"--right",0); },function(V){ V.T(5,4.5,1,-2,.2); }]);
+  WG("a2-5",pl1(A),[function(V){ ar(V,v,0,6,"--dx",0); rect(V,0,6,2,.6,"v(6) · 6 = 12"); V.Tx(3,3.4,"30 m","--dx",1,{anchor:"middle"}); }]);
+  WG("a2-6",pl2(A,{f:function(t){ return s(t)-5; },from:0,to:6,yr:[0,35],sy:5,yl:"Weg in m"}),[function(V){ hl(V.s,20,"--gold",0,"20 m",6.5); },function(V){ V.s.Pt(3.781,20,"t ≈ 3,78","--right",0,{dx:8,dy:22}); ar(V.r,v,0,3.781,"--dx",.2); }],
+    [{t:ALT+"Grafisch: Man verschiebt "+K("s")+" um 5 nach unten (das ist der seit dem Start zurückgelegte Weg) und schneidet mit der Geraden auf Höhe 20."}]);
+})();
+
+/* ───── Aufgabe 3 ───── */
+(function(){ var A=A_(3), a=a3, Mf=function(t){ return 18+72*Math.exp(-.25*t); }, G={f:Mf,from:0,to:12,yr:[0,100],sy:20,yl:"M(t) in mg"};
+  WG("a3-1",pl1(A),[function(V){ V.sweep(0,4); ar(V,a,0,4,"--dx",.3); V.Tx(2,4,"≈ 45,51 mg","--ink",1,{anchor:"middle"}); }],
+    [{t:ALT+"Mit Technologie, etwa in GeoGebra:",m:"Integral(18 e^(-0.25t), 0, 4) ≈ 45,51"}]);
+  WG("a3-2",pl2(A,G),[function(V){ V.s.Pt(0,90,"90 mg","--right",0); },function(V){ V.s.F(Mf,"--dx",0,{from:0,to:12}); hl(V.s,18,"--ink-3",.6,"18 mg",12.5); }]);
+  WG("a3-3",pl1(A),[function(V){ hl(V,3,"--gold",0,"3 mg/h",12.8); },function(V){ V.Pt(7.167,3,"t ≈ 7,17","--right",0,{dx:6,dy:-12}); }],
+    [{t:ALT+"Grafisch: Schnittpunkt des Graphen von "+K("a")+" mit der Geraden auf Höhe 3."}]);
+  WG("a3-4",pl2(A,G),[function(V){ V.s.F(Mf,"--dx",0,{from:0,to:12}); hl(V.s,40,"--gold",.3,"40 mg",12.5); },function(V){ V.s.Pt(4.742,40,"t ≈ 4,74","--right",0,{dx:8,dy:22}); }],
+    [{t:ALT+"Über die abgebaute Menge: Bei 40 mg Rest sind 50 mg abgebaut.",m:K("int(0,T) a(t) dt = 72(1 - e^(-0,25T)) = 50")+" ⇒ "+K("T ≈ 4,74"),a:function(V){ V.reset(); ar(V.r,a,0,4.742,"--dx",0); V.r.Tx(2.3,4,"50 mg","--ink",.6,{anchor:"middle"}); }}]);
+  WG("a3-5",pl2(A,G),[function(V){ V.r.Pt(2,a(2),"a(2) ≈ 10,9","--right",0); var k=tang(V.s,Mf,2,1.5,"--right",.3); V.s.Tx(3.6,Mf(2),"Steigung ≈ −10,9","--right",.8); }]);
+  WG("a3-6",pl2(A,G),[function(V){ V.s.F(Mf,"--dx",0,{from:0,to:12}); hl(V.s,18,"--right",.5,"untere Grenze 18 mg",12.5); }]);
+})();
+
+/* ───── Aufgabe 4 ───── */
+(function(){ var A=A_(4), q=q4, Bf=function(t){ return -t*t*t+9*t*t+20*t+40; }, G={f:Bf,from:0,to:6,yr:[0,300],sy:50,yl:"B(t) in m³"};
+  var cviz=vPlane([-.4,6.6],[0,60],{W:560,H:320,xl:"t in h",yl:"q(t) in m³/h",sx:1,sy:10});
+  WG("a4-1",cviz,[null,function(V){ V.reset(); ar(V,q,0,4,"--rise",0,{op:".22"}); V.F(q,"--dx",0,{from:0,to:6}); V.Tx(2,6,"160 m³","--ink",.4,{anchor:"middle"}); }]);
+  var s1=A.teile[0].weg; s1[0].ctl={label:K("c"),min:0,max:40,step:1,val:8,fmt:function(c){ return "c = "+c+": Fläche = "+num(80+4*c)+" m³"; },
+    on:function(V,c){ var f=function(t){ return -3*t*t+18*t+c; }; ar(V,f,0,4,(80+4*c===160)?"--rise":"--dx",0,{op:".2"}); V.F(f,"--dx",0,{from:0,to:6}); V.Tx(2,6,num(80+4*c)+" m³","--ink",0,{anchor:"middle"}); }};
+  s1[0].t="Zieh den Regler: Die Fläche von 0 bis 4 muss 160 m³ sein. "+s1[0].t;
+  WG("a4-2",pl2(A,G),[function(V){ V.s.F(Bf,"--dx",0,{from:0,to:6}); },function(V){ V.s.Pt(0,40,"B(0) = 40","--right",0); }]);
+  WG("a4-3",pl1(A),[function(V){ V.Pt(3,47,"q(3) = 47","--right",0); V.Sg(1.8,47,4.2,47,"--gold",.3); }],
+    [{t:ALT+"Symmetrie: Die Parabel hat bei "+K("t = 0")+" und "+K("t = 6")+" denselben Wert 20, ihr Scheitel liegt in der Mitte bei "+K("t = 3")+".",a:function(V){ V.reset(); V.Pt(0,20,"","--right",0); V.Pt(6,20,"","--right",.2); V.Sg(3,0,3,50,"--gold",.4,{dash:"6 4",w:2}); }}]);
+  WG("a4-4",pl2(A,G),[function(V){ V.r.Pt(2,44,"q(2) = 44","--right",0); tang(V.s,Bf,2,1,"--right",.3); V.s.Tx(3.1,Bf(2),"Steigung 44","--right",.8); }]);
+  WG("a4-5",pl2(A,G),[function(V){ V.s.Pt(6,268,"B(6) = 268","--right",0,{dx:-112}); }],
+    [{t:ALT+"Anfangsinhalt plus Zunahme:",m:K("40 + int(0,6) q(t) dt = 40 + 228 = 268"),a:function(V){ V.reset(); ar(V.r,q,0,6,"--dx",0); V.r.Tx(3,8,"228 m³","--ink",.6,{anchor:"middle"}); }}]);
+  WG("a4-6",pl2(A,G),[function(V){ hl(V.s,250,"--right",0,"250 m³",6.5); V.s.Pt(6,268,"268","--right",.4,{dx:-40}); V.s.Pt(5.3,250,"t ≈ 5,3","--gold",.7,{dx:-70,dy:-12}); }]);
+})();
+
+/* ───── Aufgabe 5 ───── */
+(function(){ var A=A_(5), r=r5;
+  WG("a5-1",pl1(A),[function(V){ V.sweep(0,3); ar(V,r,0,3,"--dx",.3); V.Tx(1.5,20,"396 Personen","--ink",1,{anchor:"middle"}); }]);
+  WG("a5-2",pl1(A),[function(V){ ar(V,r,0,6,"--dx",0); V.Tx(3,30,"Fläche = Personen","--ink",.5,{anchor:"middle"}); },function(V){ V.Pt(2,132,"r(2) = 132 Personen/h","--right",0); }]);
+  WG("a5-3",pl1(A),[function(V){ V.Pt(2,132,"r(2)","--right",0); ar(V,r,0,2,"--dx",.4); rect(V,0,2,116,1,"Mittelwert 116"); }]);
+  WG("a5-4",pl1(A),[function(V){ V.Pt(3,168,"r(3) = 168","--right",0); V.Sg(1.8,168,4.2,168,"--gold",.3); }],
+    [{t:ALT+"Symmetrie: "+K("r(0) = r(6) = 60")+", der Scheitel der Parabel liegt also bei "+K("t = 3")+".",a:function(V){ V.reset(); V.Pt(0,60,"","--right",0); V.Pt(6,60,"","--right",.2); V.Sg(3,0,3,190,"--gold",.4,{dash:"6 4",w:2}); }}]);
+  WG("a5-5",pl1(A),[function(V){ V.Pt(0,60,"r(0) = 60","--right",0,{dx:10}); V.Pt(6,60,"r(6) = 60","--right",.2,{dx:-82}); V.Sg(3,0,3,190,"--gold",.5,{dash:"6 4",w:2}); }]);
+})();
+
+/* ───── Aufgabe 6 ───── */
+(function(){ var A=A_(6), P=p6, E=function(t){ return 2*t*t+12*t; }, G={f:E,from:0,to:8,yr:[0,250],sy:50,yl:"E(t) in kWh"};
+  WG("a6-1",pl1(A),[function(V){ V.sweep(0,8); ar(V,P,0,8,"--dx",.3); V.Tx(4,6,"224 kWh","--ink",1,{anchor:"middle"}); }],
+    [{t:ALT+"Trapezformel, weil "+K("P")+" linear ist:",m:K("{P(0) + P(8)/2} * 8 = {12 + 44/2} * 8 = 224"),a:function(V){ V.reset(); trap(V,0,8,P); }}]);
+  WG("a6-2",pl1(A),[function(V){ ar(V,P,0,8,"--dx",0); rect(V,0,8,28,.6,"mittlere Leistung 28 kW"); V.T(1,16,1,4,1.2); }]);
+  var bviz=vPlane([-.5,9],[0,60],{W:560,H:320,xl:"t in h",yl:"Q(t) in kW",sx:1,sy:10});
+  WG("a6-3",bviz,[null]);
+  var c3=A.teile[2].weg; c3[0].ctl={label:K("b"),min:0,max:30,step:1,val:4,fmt:function(b){ return "b = "+b+": "+num(128+8*b)+" kWh"; },
+    on:function(V,b){ var f=function(t){ return 4*t+b; }; ar(V,f,0,8,(128+8*b===256)?"--rise":"--dx",0,{op:".2"}); V.F(f,"--dx",0,{from:0,to:8}); V.Tx(4,5,num(128+8*b)+" kWh","--ink",0,{anchor:"middle"}); }};
+  c3[0].t="Zieh den Regler, bis die Fläche 256 kWh ist. "+(c3[0].t||"");
+  WG("a6-4",pl2(A,G),[function(V){ V.s.F(E,"--dx",0,{from:0,to:8}); V.s.Pt(0,0,"E(0) = 0","--right",.6); }]);
+  WG("a6-5",pl2(A,G),[function(V){ ar(V.r,P,2,5,"--dx",0); V.s.F(E,"--ink-2",0,{from:0,to:8}); V.s.Pt(2,32,"E(2) = 32","--right",.3,{dx:-90}); V.s.Pt(5,110,"E(5) = 110","--right",.5,{dx:-100}); V.s.Sg(5,32,5,110,"--dx",.8); V.s.Sg(2,32,5,32,"--ink-3",.8,{dash:"5 5",w:1.5}); V.s.Tx(5.2,70,"78 kWh","--dx",1.1); }],
+    [{t:ALT+"Trapez unter der Geraden von 2 bis 5:",m:K("{P(2) + P(5)/2} * 3 = {20 + 32/2} * 3 = 78"),a:function(V){ V.reset(); trap(V.r,2,5,P); }}]);
+})();
+
+/* ───── Aufgabe 7 ───── */
+(function(){ var A=A_(7), c=c7, I=function(T){ return 72*(1-Math.exp(-.25*T)); };
+  WG("a7-1",pl1(A),[function(V){ V.sweep(0,4); ar(V,c,0,4,"--dx",.3); V.Tx(2,4,"≈ 45,51","--ink",1,{anchor:"middle"}); },null]);
+  WG("a7-2",pl1(A),[function(V){ V.Pt(0,18,"c(0) = 18","--right",0); tang(V,c,2,1.4,"--right",.4); V.Tx(3.6,c(2)+1,"fallend","--right",.9); }]);
+  WG("a7-3",pl1(A),[function(V){ tang(V,c,4,1.6,"--right",0); V.Pt(4,c(4),"c(4)","--dy",.4,{dx:10,dy:-14}); rect(V,0,4,I(4)/4,.8,"Mittelwert ≈ 11,4"); }]);
+  WG("a7-4",pl1(A),[null,function(V){ V.reset(); ar(V,c,0,2.773,"--rise",0,{op:".25"}); V.V(2.773,"--gold",.3); V.Tx(1.4,3,"36","--ink",.5,{anchor:"middle"}); }],
+    [{t:ALT+"Die Gesamtfläche bis ins Unendliche ist 72. 36 ist genau die Hälfte, also ist "+K("T")+" die Halbwertszeit von "+K("c")+":",m:K("e^(-0,25T) = {1/2}")+" ⇒ "+K("T = 4 * ln(2)")}]);
+  var s4=A.teile[3].weg; s4[0].ctl={label:K("T"),min:0,max:12,step:.1,val:1,fmt:function(T){ return "T = "+num(T)+": Fläche ≈ "+num(I(T),2); },
+    on:function(V,T){ ar(V,c,0,Math.max(.01,T),Math.abs(I(T)-36)<.4?"--rise":"--dx",0,{op:".25"}); V.Tx(T/2+.3,3,num(I(T),1),"--ink",0,{anchor:"middle"}); }};
+  s4[0].t="Zieh den Regler, bis die Fläche 36 ist. "+s4[0].t;
+  WG("a7-5",pl1(A),[{ctl:0}]);
+  var s5=A.teile[4].weg; s5[0].ctl={label:K("T"),min:1,max:14,step:.5,val:4,fmt:function(T){ return "T = "+num(T)+": Fläche ≈ "+num(I(T),2)+" (Grenzwert 72)"; },
+    on:function(V,T){ ar(V,c,0,T,"--dx",0,{op:".25"}); V.Tx(T/2+.3,3,num(I(T),1),"--ink",0,{anchor:"middle"}); }};
+})();
+
+/* ───── Aufgabe 8 ───── */
+(function(){ var A=A_(8), z=z8, eight=cst(8);
+  WG("a8-1",pl1(A),[function(V){ ar(V,z,0,4,"--dx",0,{g:eight}); V.Tx(2,10.5,"Nettozufluss","--ink",.6,{anchor:"middle"}); }]);
+  var aviz=vPlane([-.3,4.6],[0,28],{W:560,H:320,xl:"t in h",yl:"z(t) in m³/h",sx:1,sy:4,pre:function(P){ P.seg(-.3,8,4.6,8,"--right",2,{dash:"6 4"}); }});
+  WG("a8-2",aviz,[{ctl:0}]);
+  var s2=A.teile[1].weg; s2[0].ctl={label:K("a"),min:0,max:5,step:.25,val:1,fmt:function(a){ return "a = "+num(a)+": Zunahme ≈ "+num(32*a/3,2)+" m³"; },
+    on:function(V,a){ var f=function(t){ return a*t*(4-t)+8; }; ar(V,f,0,4,Math.abs(32*a/3-32)<.01?"--rise":"--dx",0,{g:eight,op:".25"}); V.F(f,"--dx",0,{from:0,to:4}); }};
+  s2[0].t="Zieh den Regler: Die Fläche zwischen "+K("z")+" und dem Abfluss muss 32 m³ sein. "+s2[0].t;
+  WG("a8-3",pl1(A),[function(V){ V.Pt(2,20,"Maximum bei t = 2","--right",0); V.Pt(0,8,"","--gold",.3); V.Pt(4,8,"","--gold",.5); }]);
+  WG("a8-4",pl1(A),[function(V){ ar(V,z,0,4,"--dx",0,{g:eight}); shade(V,cst(16),0,4,"--right",{delay:.7,op:".18",g:eight}); V.Sg(0,16,4,16,"--right",.7); V.Tx(4,16,"8 + 8","--right",1,{dx:6,dy:-6}); }],
+    [{t:ALT+"Mit der Formel für die mittlere Änderungsrate des Volumens:",m:K("{ΔV/Δt} = {32/4} = 8")+" m³/h"}]);
+  WG("a8-5",pl1(A),[function(V){ ar(V,z,0,4,"--dx",0,{g:eight}); V.Pt(0,8,"","--right",.3); V.Pt(4,8,"","--right",.4); V.Tx(2,11,"32 m³ > 0","--ink",.8,{anchor:"middle"}); }]);
+})();
+
+/* ───── Aufgabe 9 ───── */
+(function(){ var A=A_(9), v=v9, s=function(t){ return t*t+2*t; };
+  var mviz=vPlane([-.3,4.6],[0,20],{W:560,H:320,xl:"t in s",yl:"v(t) in m/s",sx:1,sy:2});
+  WG("a9-1",mviz,[{ctl:0}],[{t:ALT+"Trapezformel: Der Graph ist eine Gerade, also",m:K("{v(0) + v(4)/2} * 4 = {2 + (4m + 2)/2} * 4 = 8m + 8 = 24")}]);
+  var s1=A.teile[0].weg; s1[0].ctl={label:K("m"),min:0,max:4,step:.25,val:.5,fmt:function(m){ return "m = "+num(m)+": Weg = "+num(8*m+8)+" m"; },
+    on:function(V,m){ var f=function(t){ return m*t+2; }; ar(V,f,0,4,8*m+8===24?"--rise":"--dx",0,{op:".22"}); V.F(f,"--dx",0,{from:0,to:4}); }};
+  s1[0].t="Zieh den Regler, bis die Fläche 24 m ist. "+s1[0].t;
+  WG("a9-2",pl1(A),[function(V){ ar(V,v,0,4,"--dx",0); rect(V,0,4,6,.6,"6 m/s"); }]);
+  WG("a9-3",pl1(A),[function(V){ V.sweep(1,3); ar(V,v,1,3,"--dx",.3); }],
+    [{t:ALT+"Trapez mit den Seiten "+K("v(1) = 4")+" und "+K("v(3) = 8")+":",m:K("{4 + 8/2} * 2 = 12"),a:function(V){ V.reset(); trap(V,1,3,v); }}]);
+  WG("a9-4",pl2(A,{f:s,from:0,to:4,yr:[0,26],sy:5,yl:"s(t) in m"}),[function(V){ V.r.Pt(2,6,"v(2) = 6","--right",0); tang(V.s,s,2,1,"--right",.3); V.s.Tx(3.1,s(2),"Steigung 6","--right",.8); }]);
+  WG("a9-5",pl1(A),[function(V){ trap(V,0,4,v); ar(V,v,0,4,"--right",.6,{op:".14"}); V.Tx(0,2,"2","--right",.8,{dx:8,dy:-6}); V.Tx(4,10,"10","--right",.9,{dx:6}); }]);
+})();
+
+/* ───── Aufgabe 10 ───── */
+(function(){ var A=A_(10), r=r10;
+  WG("a10-1",pl1(A),[function(V){ V.Pt(0,4,"r(0) = 4","--right",0); ar(V,r,0,6,"--dx",.4); V.Tx(3,2,"42 m³","--ink",1,{anchor:"middle"}); }]);
+  var aviz=vPlane([-.4,6.6],[0,14],{W:560,H:320,xl:"t in h",yl:"r(t) in m³/h",sx:1,sy:2});
+  WG("a10-2",aviz,[{ctl:0}]);
+  var s2=A.teile[1].weg; s2[0].ctl={label:K("a"),min:-.5,max:2,step:.25,val:0,fmt:function(a){ return "a = "+num(a)+": "+num(18*a+24)+" m³"; },
+    on:function(V,a){ var f=function(t){ return a*t+4; }; ar(V,f,0,6,18*a+24===42?"--rise":"--dx",0,{op:".22"}); V.F(f,"--dx",0,{from:0,to:6}); }};
+  s2[0].t="Mit "+K("b = 4")+": Zieh den Regler, bis die Fläche 42 m³ ist. "+s2[0].t;
+  WG("a10-3",pl1(A),[function(V){ ar(V,r,0,6,"--dx",0); V.T(1,5,1,1,.5); }]);
+  WG("a10-4",pl1(A),[function(V){ V.sweep(2,5); ar(V,r,2,5,"--dx",.3); }],
+    [{t:ALT+"Trapez mit den Seiten "+K("r(2) = 6")+" und "+K("r(5) = 9")+":",m:K("{6 + 9/2} * 3 = 22,5"),a:function(V){ V.reset(); trap(V,2,5,r); }}]);
+  WG("a10-5",pl1(A),[function(V){ V.T(2,6,1,1,0); V.Tx(3.1,6.5,"+1 m³/h pro h","--dy",1.2); }]);
+})();
+
+/* ───── Aufgabe 11 ───── */
+(function(){ var A=A_(11), D=D11, I=function(T){ return 60/(Math.log(.5)/10)*(Math.exp(Math.log(.5)/10*T)-1); };
+  WG("a11-1",pl1(A),[function(V){ V.Pt(0,60,"D(0) = 60","--right",0); },function(V){ V.Pt(10,30,"D(10) = 30","--right",0); V.Pt(20,15,"","--gold",.4); V.Pt(30,7.5,"","--gold",.6); V.Tx(21,20,"Halbierung alle 10 min","--gold",.8); }]);
+  WG("a11-2",pl1(A),[function(V){ V.sweep(0,20); ar(V,D,0,20,"--dx",.3); }]);
+  WG("a11-3",pl1(A),[function(V){ [0,10,20,30].forEach(function(x,i){ V.Pt(x,D(x),"","--right",i*.25); }); V.Tx(12,45,"je 10 min: Hälfte","--right",1); }]);
+  WG("a11-4",pl1(A),[function(V){ V.sweep(0,20); ar(V,D,0,20,"--dx",.3); V.Tx(10,8,"≈ 649,2","--ink",1,{anchor:"middle"}); }],
+    [{t:ALT+"Mit Technologie:",m:"Integral(60 e^(−0.0693t), 0, 20) ≈ 649,2"}]);
+  WG("a11-5",pl1(A),[{ctl:0}]);
+  var s5=A.teile[4].weg; s5[0].ctl={label:K("T"),min:5,max:40,step:1,val:10,fmt:function(T){ return "T = "+T+": Fläche ≈ "+num(I(T),1)+" (Grenzwert ≈ 865,6)"; },
+    on:function(V,T){ ar(V,D,0,T,"--dx",0,{op:".25"}); }};
+  A.teile[4].weg[0].t=A.teile[4].weg[0].t||"Zieh den Regler: Die Fläche wächst immer langsamer.";
+})();
+
+/* ───── Aufgabe 12 ───── */
+(function(){ var A=A_(12), q=q12;
+  WG("a12-1",pl1(A,{nograph:true}),[function(V){ V.Pt(0,3,"q(0) = 3","--right",0); V.Pt(2,7,"q(2) = 7","--right",.3); V.Sg(1.2,7,2.8,7,"--gold",.6); }]);
+  WG("a12-2",pl1(A,{nograph:true}),[function(V){ V.F(q,"--dx",0,{from:0,to:4}); V.Pt(0,3,"","--right",.8); V.Pt(2,7,"","--right",1); }]);
+  WG("a12-3",pl1(A),[function(V){ V.Pt(0,3,"q(0)","--right",0); tang(V,q,2,.8,"--gold",.3); ar(V,q,0,4,"--dx",.7); }]);
+  WG("a12-4",pl1(A),[function(V){ V.sweep(0,4); ar(V,q,0,4,"--dx",.3); V.Tx(2,1.5,"≈ 22,67 m³","--ink",1,{anchor:"middle"}); }],
+    [{t:ALT+"Mit Technologie:",m:"Integral(−t² + 4t + 3, 0, 4) = 68/3 ≈ 22,67"}]);
+  WG("a12-5",pl1(A),[function(V){ hl(V,3,"--right",0,"q ≥ 3 > 0",4.5); V.sweep(0,4); ar(V,q,2,4,"--dx",.6); V.Tx(3,1.5,"weiter Zufluss","--ink",1.2,{anchor:"middle"}); }]);
+})();
+
 /* ══════════ Übungstool · Integralrechnung Teil 2 ══════════
    Zwei Modi: Üben (Tipps, sofort auswerten, Lösungsweg) und Maturamodus (alles eintragen, dann abgeben). */
 var HELP={};
@@ -2904,7 +3102,7 @@ function specOf(t){
   else if(t.format==="rf") sp={fmt:"tf",yes:"richtig",no:"falsch",items:a.zeilen.map(function(z){ return {s:z.s,r:z.r,w:z.w}; })};
   sp.q=t.auftrag; sp.tips=t.tips||[];
   var steps=(t.weg||[]).length?t.weg:[t.loesung];
-  sp.sol={merk:"<b>Lösungserwartung:</b> "+t.loesung,steps:steps};
+  sp.sol={merk:"<b>Lösungserwartung:</b> "+t.loesung,steps:steps,viz:t.viz};
   if(MODE==="matura"&&sp.fmt==="mc") sp.items=sp.items.slice();
   return sp;
 }
